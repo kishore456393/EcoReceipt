@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SHOP_OWNER
+  CUSTOMER
+}
+
+enum BillStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role?
+  phone         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  shop     Shop?
+  receipts Receipt[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Shop {
+  id          String   @id @default(cuid())
+  ownerId     String   @unique
+  name        String
+  address     String?
+  phone       String?
+  logo        String?
+  gstNumber   String?
+  upiId       String?
+  upiName     String?
+  category    String?
+  taxPercent  Float    @default(0)
+  razorpayKey String?
+  razorpaySecret String?
+  smsApiKey   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  items Item[]
+  bills Bill[]
+}
+
+model Item {
+  id                String   @id @default(cuid())
+  shopId            String
+  name              String
+  barcode           String?
+  price             Float
+  category          String   @default("General")
+  unit              String   @default("piece")
+  stock             Int      @default(0)
+  lowStockThreshold Int      @default(5)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  shop      Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  billItems BillItem[]
+
+  @@index([shopId, barcode])
+  @@index([shopId, name])
+}
+
+model Bill {
+  id            String     @id @default(cuid())
+  shopId        String
+  billNumber    String     @unique
+  customerName  String?
+  customerPhone String?
+  subtotal      Float
+  taxAmount     Float      @default(0)
+  taxPercent    Float      @default(0)
+  discount      Float      @default(0)
+  total         Float
+  status        BillStatus @default(PENDING)
+  qrToken       String     @unique @default(cuid())
+  razorpayOrderId String?
+  razorpayPaymentId String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  shop     Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  items    BillItem[]
+  receipts Receipt[]
+
+  @@index([shopId, createdAt])
+  @@index([qrToken])
+}
+
+model BillItem {
+  id       String @id @default(cuid())
+  billId   String
+  itemId   String?
+  name     String
+  price    Float
+  quantity Int
+  total    Float
+
+  bill Bill  @relation(fields: [billId], references: [id], onDelete: Cascade)
+  item Item? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+}
+
+model Receipt {
+  id           String    @id @default(cuid())
+  billId       String
+  customerId   String
+  viewedAt     DateTime  @default(now())
+  downloadedAt DateTime?
+
+  bill     Bill @relation(fields: [billId], references: [id], onDelete: Cascade)
+  customer User @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([billId, customerId])
+}
