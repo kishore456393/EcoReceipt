@@ -74,7 +74,7 @@ function LoginForm() {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      await signIn("google", { callbackUrl });
+      await signIn("google", { callbackUrl, prompt: "select_account" });
     } catch {
       toast.error("Failed to connect to Google. Please try again.");
       setGoogleLoading(false);
