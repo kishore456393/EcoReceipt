@@ -88,7 +88,7 @@ export default function DashboardPage() {
           </h2>
           <p className="text-muted-foreground">Here&apos;s what&apos;s happening with your shop.</p>
         </div>
-        <Button nativeButton={false} render={<Link href="/billing" />}>
+        <Button render={<Link href="/billing" />}>
             <Plus size={18} className="mr-2" />
             New Bill
         </Button>
@@ -114,7 +114,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">Recent Bills</CardTitle>
-            <Button nativeButton={false} variant="ghost" size="sm" render={<Link href="/bills" />}>
+            <Button variant="ghost" size="sm" render={<Link href="/bills" />}>
               View all
             </Button>
           </CardHeader>

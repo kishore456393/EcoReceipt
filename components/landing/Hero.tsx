@@ -75,7 +75,7 @@ export default function Hero() {
             variants={fadeIn}
             className="mt-8 flex flex-col items-center gap-4 sm:flex-row lg:justify-start"
           >
-            <Button nativeButton={false} size="lg" className="h-12 px-8 text-base" render={<Link href="/login" />}>
+            <Button size="lg" className="h-12 px-8 text-base" render={<Link href="/login" />}>
               Get Started Free
               <ArrowRight className="ml-2 h-4 w-4" data-icon="inline-end" />
             </Button>
@@ -83,7 +83,6 @@ export default function Hero() {
               variant="outline"
               size="lg"
               className="h-12 px-8 text-base"
-              nativeButton={false}
               render={<a href="#how-it-works" />}
             >
               See How It Works

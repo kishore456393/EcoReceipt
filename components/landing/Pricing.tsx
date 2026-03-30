@@ -179,7 +179,6 @@ export default function Pricing() {
                     className="w-full"
                     variant={plan.popular ? "default" : "outline"}
                     size="lg"
-                    nativeButton={false}
                     render={<Link href={plan.href} />}
                   >
                     {plan.cta}
