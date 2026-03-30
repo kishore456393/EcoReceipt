@@ -146,55 +146,60 @@ export async function POST(req: Request) {
 
     const billNumber = await generateBillNumber(shop.id);
 
-    const bill = await prisma.$transaction(async (tx) => {
-      const createdBill = await tx.bill.create({
-        data: {
-          shopId: shop.id,
-          billNumber,
-          customerName: customerName || null,
-          customerPhone: customerPhone || null,
-          subtotal: Math.round(subtotal * 100) / 100,
-          taxAmount: Math.round(taxAmount * 100) / 100,
-          taxPercent: effectiveTaxPercent,
-          discount: Math.round(discountAmount * 100) / 100,
-          total: Math.round(total * 100) / 100,
-          items: {
-            create: items.map((item: BillItemInput) => ({
-              itemId: item.itemId || null,
-              name: item.name,
-              price: item.price,
-              quantity: item.quantity,
-              total: Math.round(item.price * item.quantity * 100) / 100,
-            })),
-          },
+    // Create the bill (no interactive transaction — Supabase connection pooler doesn't support them)
+    const bill = await prisma.bill.create({
+      data: {
+        shopId: shop.id,
+        billNumber,
+        customerName: customerName || null,
+        customerPhone: customerPhone || null,
+        subtotal: Math.round(subtotal * 100) / 100,
+        taxAmount: Math.round(taxAmount * 100) / 100,
+        taxPercent: effectiveTaxPercent,
+        discount: Math.round(discountAmount * 100) / 100,
+        total: Math.round(total * 100) / 100,
+        items: {
+          create: items.map((item: BillItemInput) => ({
+            itemId: item.itemId || null,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            total: Math.round(item.price * item.quantity * 100) / 100,
+          })),
         },
-        include: {
-          items: true,
-        },
-      });
-
-      // Decrease stock for each item that has an itemId
-      for (const item of items) {
-        if (item.itemId) {
-          await tx.item.update({
-            where: { id: item.itemId },
-            data: {
-              stock: {
-                decrement: item.quantity,
-              },
-            },
-          });
-        }
-      }
-
-      return createdBill;
+      },
+      include: {
+        items: true,
+      },
     });
 
+    // Decrease stock for items (batch update, non-blocking)
+    const stockUpdates = items
+      .filter((item) => item.itemId)
+      .map((item) =>
+        prisma.item.update({
+          where: { id: item.itemId! },
+          data: { stock: { decrement: item.quantity } },
+        })
+      );
+
+    if (stockUpdates.length > 0) {
+      await Promise.all(stockUpdates);
+    }
+
     return NextResponse.json(bill, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating bill:", error);
+    console.error("Error details:", {
+      message: error?.message,
+      code: error?.code,
+      meta: error?.meta,
+    });
+    const errorMessage = error?.code === "P2002"
+      ? "Duplicate bill number, please try again"
+      : "Failed to create bill";
     return NextResponse.json(
-      { error: "Failed to create bill" },
+      { error: errorMessage },
       { status: 500 }
     );
   }

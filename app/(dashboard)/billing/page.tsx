@@ -233,6 +233,7 @@ export default function BillingPage() {
             )
           );
         }
+        setBarcodeInput("");
         return;
       }
 
@@ -285,6 +286,7 @@ export default function BillingPage() {
         toast.error("Failed barcode lookup. Add product manually.");
       } finally {
         setLookupLoading(false);
+        setBarcodeInput(""); // clear input after lookup
       }
     },
     [items, soundEnabled, lastScannedBarcode, cart]
@@ -718,9 +720,16 @@ export default function BillingPage() {
 
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Enter barcode"
+                    placeholder="Enter barcode..."
                     value={barcodeInput}
                     onChange={(e) => setBarcodeInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && barcodeInput.trim() && !lookupLoading) {
+                        e.preventDefault();
+                        lookupAndAddByBarcode(barcodeInput);
+                      }
+                    }}
+                    autoFocus
                   />
                   <Button
                     type="button"
@@ -991,72 +1000,79 @@ export default function BillingPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={scannerOpen} onOpenChange={setScannerOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader className="pr-8">
-            <DialogTitle className="flex items-center justify-between">
-              <span>Scan Product Barcode</span>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setSoundEnabled(!soundEnabled)}
-                  title={soundEnabled ? "Mute sounds" : "Enable sounds"}
-                >
-                  {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
-                </Button>
-              </div>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="overflow-hidden rounded-lg border bg-black relative">
-              <video
-                ref={videoRef}
-                className="h-64 w-full object-cover"
-                muted
-                playsInline
-              />
-              {continuousMode && (
-                <div className="absolute top-2 left-2 flex items-center gap-1 rounded-full bg-green-500/90 px-2 py-1 text-xs text-white">
-                  <RefreshCw size={12} className="animate-spin" />
-                  Continuous
+      {scannerOpen && (
+        <Dialog open={scannerOpen} onOpenChange={setScannerOpen}>
+          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="pr-8">
+              <DialogTitle className="flex items-center justify-between">
+                <span>Scan Product Barcode</span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setSoundEnabled(!soundEnabled)}
+                    title={soundEnabled ? "Mute sounds" : "Enable sounds"}
+                  >
+                    {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                  </Button>
                 </div>
-              )}
-              {lastScannedBarcode && continuousMode && (
-                <div className="absolute bottom-2 left-2 right-2 rounded bg-black/70 px-2 py-1 text-xs text-white truncate">
-                  Last: {lastScannedBarcode}
-                </div>
-              )}
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="continuousMode"
-                  checked={continuousMode}
-                  onCheckedChange={(checked: boolean) => setContinuousMode(checked)}
-                  size="sm"
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="overflow-hidden rounded-lg border bg-black relative">
+                <video
+                  ref={videoRef}
+                  className="h-48 w-full object-cover"
+                  muted
+                  playsInline
                 />
-                <Label htmlFor="continuousMode" className="text-sm cursor-pointer">
-                  Continuous scanning (for multiple items)
-                </Label>
+                {continuousMode && (
+                  <div className="absolute top-2 left-2 flex items-center gap-1 rounded-full bg-green-500/90 px-2 py-1 text-xs text-white">
+                    <RefreshCw size={12} className="animate-spin" />
+                    Continuous
+                  </div>
+                )}
+                {lastScannedBarcode && continuousMode && (
+                  <div className="absolute bottom-2 left-2 right-2 rounded bg-black/70 px-2 py-1 text-xs text-white truncate">
+                    Last: {lastScannedBarcode}
+                  </div>
+                )}
               </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="continuousMode"
+                    checked={continuousMode}
+                    onCheckedChange={(checked: boolean) => setContinuousMode(checked)}
+                    size="sm"
+                  />
+                  <Label htmlFor="continuousMode" className="text-sm cursor-pointer">
+                    Continuous scanning (for multiple items)
+                  </Label>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {continuousMode
+                  ? "Keep scanning products. Each barcode adds to cart automatically."
+                  : "Point camera at product barcode. Scanner closes after detection."}
+              </p>
+              <Button
+                variant="outline"
+                className="w-full"
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setScannerOpen(false);
+                }}
+              >
+                Close Scanner
+              </Button>
             </div>
-            <p className="text-sm text-muted-foreground">
-              {continuousMode
-                ? "Keep scanning products. Each barcode adds to cart automatically."
-                : "Point camera at product barcode. Scanner closes after detection."}
-            </p>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => setScannerOpen(false)}
-            >
-              Close Scanner
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Mobile Scanner Dialog */}
       <Dialog open={mobileScannerOpen} onOpenChange={(open) => {

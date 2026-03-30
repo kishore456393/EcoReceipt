@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, QrCode, Receipt, Leaf } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const fadeIn = {
   hidden: { opacity: 0, y: 20 },
@@ -75,18 +76,16 @@ export default function Hero() {
             variants={fadeIn}
             className="mt-8 flex flex-col items-center gap-4 sm:flex-row lg:justify-start"
           >
-            <Button size="lg" className="h-12 px-8 text-base" render={<Link href="/login" />}>
+            <Link href="/login" className={cn(buttonVariants({ size: "lg" }), "h-12 px-8 text-base")}>
               Get Started Free
               <ArrowRight className="ml-2 h-4 w-4" data-icon="inline-end" />
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              className="h-12 px-8 text-base"
-              render={<a href="#how-it-works" />}
+            </Link>
+            <a
+              href="#how-it-works"
+              className={cn(buttonVariants({ variant: "outline", size: "lg" }), "h-12 px-8 text-base")}
             >
               See How It Works
-            </Button>
+            </a>
           </motion.div>
 
           <motion.p

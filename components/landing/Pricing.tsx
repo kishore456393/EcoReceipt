@@ -4,7 +4,8 @@ import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import Link from "next/link";
 import { Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -175,14 +176,18 @@ export default function Pricing() {
                 </CardContent>
 
                 <CardFooter>
-                  <Button
-                    className="w-full"
-                    variant={plan.popular ? "default" : "outline"}
-                    size="lg"
-                    render={<Link href={plan.href} />}
+                  <Link
+                    href={plan.href}
+                    className={cn(
+                      buttonVariants({
+                        variant: plan.popular ? "default" : "outline",
+                        size: "lg",
+                      }),
+                      "w-full"
+                    )}
                   >
                     {plan.cta}
-                  </Button>
+                  </Link>
                 </CardFooter>
               </Card>
             </motion.div>
