@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   }
 
   const { role } = await req.json();
-  if (!["SHOP_OWNER", "CUSTOMER"].includes(role)) {
+  if (role !== "SHOP_OWNER") {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
   }
 

@@ -6,12 +6,12 @@ import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Logo } from "@/components/shared/Logo";
-import { Store, ShoppingBag, ArrowRight } from "lucide-react";
+import { Store, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
 export default function RoleSelectPage() {
-  const [selected, setSelected] = useState<"SHOP_OWNER" | "CUSTOMER" | null>(null);
+  const [selected, setSelected] = useState<"SHOP_OWNER" | null>("SHOP_OWNER");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { update } = useSession();
@@ -27,8 +27,8 @@ export default function RoleSelectPage() {
       });
       if (!res.ok) throw new Error("Failed to set role");
       await update();
-      toast.success("Role set successfully!");
-      router.push(selected === "SHOP_OWNER" ? "/dashboard" : "/customer");
+      toast.success("Account setup complete!");
+      router.push("/dashboard");
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
@@ -42,12 +42,6 @@ export default function RoleSelectPage() {
       title: "Shop Owner",
       description: "Set up your shop, manage inventory, and generate digital receipts",
       icon: Store,
-    },
-    {
-      id: "CUSTOMER" as const,
-      title: "Customer",
-      description: "View receipts, make payments, and download bills digitally",
-      icon: ShoppingBag,
     },
   ];
 
@@ -65,9 +59,9 @@ export default function RoleSelectPage() {
 
         <Card className="border-border/50 shadow-xl">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Choose Your Role</CardTitle>
+            <CardTitle className="text-2xl font-bold">Set Up Your Shop Account</CardTitle>
             <CardDescription className="text-base">
-              How will you be using EcoReceipt?
+              Shop owner mode is enabled for this workspace.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -104,7 +98,7 @@ export default function RoleSelectPage() {
               disabled={!selected || loading}
               onClick={handleSubmit}
             >
-              {loading ? "Setting up..." : "Continue"}
+              {loading ? "Setting up..." : "Continue to Dashboard"}
               {!loading && <ArrowRight size={18} className="ml-2" />}
             </Button>
           </CardContent>

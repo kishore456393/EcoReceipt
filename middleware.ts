@@ -6,13 +6,14 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Public routes
-  const publicRoutes = ["/", "/login", "/role-select"];
+  const publicRoutes = ["/", "/login"];
   const isPublicRoute = publicRoutes.includes(pathname);
   const isReceiptRoute = pathname.startsWith("/receipt/");
+  const isScannerRoute = pathname.startsWith("/scanner/");
   const isApiRoute = pathname.startsWith("/api/");
 
-  // Allow public routes, receipt pages, and API routes
-  if (isPublicRoute || isReceiptRoute || isApiRoute) {
+  // Allow public routes, receipt pages, scanner pages, and API routes
+  if (isPublicRoute || isReceiptRoute || isScannerRoute || isApiRoute) {
     return NextResponse.next();
   }
 
@@ -23,18 +24,15 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // If user has no role, redirect to role selection
-  if (!token.role && pathname !== "/role-select") {
-    return NextResponse.redirect(new URL("/role-select", req.url));
+  // Allow only shop owner role for dashboard authentication
+  if (token.role !== "SHOP_OWNER") {
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("error", "access_denied");
+    return NextResponse.redirect(loginUrl);
   }
 
-  // Prevent customers from accessing dashboard routes
-  if (token.role === "CUSTOMER" && pathname.startsWith("/dashboard")) {
-    return NextResponse.redirect(new URL("/customer", req.url));
-  }
-
-  // Prevent shop owners from accessing customer routes
-  if (token.role === "SHOP_OWNER" && pathname.startsWith("/customer")) {
+  // Customer dashboard is disabled in shop-owner-only mode
+  if (pathname.startsWith("/customer")) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 

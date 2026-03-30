@@ -204,13 +204,26 @@ export default function InventoryPage() {
             Manage your shop items. {items.length} item{items.length !== 1 ? "s" : ""} total.
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger
-            render={<Button onClick={openAddDialog} />}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleSeedGrocery}
+            disabled={seeding}
           >
-              <Plus size={18} className="mr-2" />
-              Add Item
-          </DialogTrigger>
+            {seeding ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Database size={16} className="mr-2" />
+            )}
+            {seeding ? "Loading..." : "Load Grocery Dataset"}
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger
+              render={<Button onClick={openAddDialog} />}
+            >
+                <Plus size={18} className="mr-2" />
+                Add Item
+            </DialogTrigger>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>{editingId ? "Edit Item" : "Add New Item"}</DialogTitle>
@@ -301,6 +314,7 @@ export default function InventoryPage() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Filters */}
