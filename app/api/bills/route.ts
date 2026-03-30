@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { generateBillNumber } from "@/lib/generate-bill-number";
 import { formatBillSMS, sendSMSFast2SMS } from "@/lib/sms";
+import { sendEmailReceipt } from "@/lib/mail";
 import os from "os";
 
 function getNetworkUrl(): string {
@@ -138,12 +139,14 @@ export async function POST(req: Request) {
       items,
       customerName,
       customerPhone,
+      customerEmail,
       discount = 0,
       taxPercent,
     } = body as {
       items: BillItemInput[];
       customerName?: string;
       customerPhone?: string;
+      customerEmail?: string;
       discount?: number;
       taxPercent?: number;
     };
@@ -176,6 +179,7 @@ export async function POST(req: Request) {
         billNumber,
         customerName: customerName || null,
         customerPhone: customerPhone || null,
+        customerEmail: customerEmail || null,
         subtotal: Math.round(subtotal * 100) / 100,
         taxAmount: Math.round(taxAmount * 100) / 100,
         taxPercent: effectiveTaxPercent,
@@ -190,7 +194,7 @@ export async function POST(req: Request) {
             total: Math.round(item.price * item.quantity * 100) / 100,
           })),
         },
-      },
+      } as any,
       include: {
         items: true,
       },
@@ -314,7 +318,53 @@ export async function PATCH(req: Request) {
         }
       }
 
-      return NextResponse.json({ ...updated, smsSent, smsError, smsSkipReason });
+      // Auto-send Email when bill is verified and customer email exists
+      let emailSent = false;
+      let emailError: string | undefined;
+      let emailSkipReason: string | undefined;
+
+      const customerEmail = (updated as any).customerEmail;
+      const senderEmail = (shop as any).senderEmail;
+      const emailAppPassword = (shop as any).emailAppPassword;
+
+      if (!customerEmail) {
+        emailSkipReason = "No customer email on bill";
+      } else if (!senderEmail || !emailAppPassword) {
+        emailSkipReason = "Shop Email credentials not configured in Shop Settings";
+      } else {
+        const baseUrl = getNetworkUrl();
+        const receiptUrl = `${baseUrl}/receipt/${updated.qrToken}`;
+
+        const result = await sendEmailReceipt({
+          shopName: shop.name,
+          senderEmail: senderEmail,
+          emailAppPassword: emailAppPassword,
+          customerEmail: customerEmail,
+          billNumber: updated.billNumber,
+          items: (updated as any).items.map((i: any) => ({
+            name: i.name,
+            quantity: i.quantity,
+            price: i.price,
+            total: i.total,
+          })),
+          subtotal: updated.subtotal,
+          taxAmount: updated.taxAmount,
+          discount: updated.discount,
+          total: updated.total,
+          status: "PAID",
+          receiptUrl,
+          customerName: updated.customerName || undefined,
+        });
+
+        emailSent = result.success;
+        emailError = result.error;
+
+        if (!result.success) {
+          console.error("Email sending failed for self-checkout:", result.error);
+        }
+      }
+
+      return NextResponse.json({ ...updated, smsSent, smsError, smsSkipReason, emailSent, emailError, emailSkipReason });
     }
 
     if (action === "cancel") {

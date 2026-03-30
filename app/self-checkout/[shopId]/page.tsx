@@ -104,6 +104,7 @@ export default function SelfCheckoutPage() {
   // Welcome step
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
 
   // Scan step
   const [search, setSearch] = useState("");
@@ -406,6 +407,7 @@ export default function SelfCheckoutPage() {
           })),
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim() || null,
+          customerEmail: customerEmail.trim() || null,
         }),
       });
 
@@ -609,6 +611,19 @@ export default function SelfCheckoutPage() {
                     onChange={(e) => setCustomerPhone(e.target.value)}
                     className="h-12 text-base"
                     inputMode="tel"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                    Email Address (optional)
+                  </label>
+                  <Input
+                    placeholder="Enter your email"
+                    value={customerEmail}
+                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    className="h-12 text-base"
+                    type="email"
                   />
                 </div>
 

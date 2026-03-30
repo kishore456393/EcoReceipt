@@ -28,6 +28,8 @@ interface ShopData {
   razorpayKey: string;
   razorpaySecret: string;
   smsApiKey: string;
+  senderEmail: string;
+  emailAppPassword: string;
 }
 
 const defaultShop: ShopData = {
@@ -42,6 +44,8 @@ const defaultShop: ShopData = {
   razorpayKey: "",
   razorpaySecret: "",
   smsApiKey: "",
+  senderEmail: "",
+  emailAppPassword: "",
 };
 
 const shopCategories = [
@@ -81,6 +85,8 @@ export default function ShopSetupPage() {
               razorpayKey: data.razorpayKey || "",
               razorpaySecret: data.razorpaySecret || "",
               smsApiKey: data.smsApiKey || "",
+              senderEmail: data.senderEmail || "",
+              emailAppPassword: data.emailAppPassword || "",
             });
           }
         }
@@ -320,6 +326,52 @@ export default function ShopSetupPage() {
               value={shop.smsApiKey}
               onChange={(e) => updateField("smsApiKey", e.target.value)}
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Email Notification Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+            Automated Email Receipts (Gmail)
+          </CardTitle>
+          <CardDescription>
+            Automatically email customers their digital receipts instantly!
+            <br/><br/>
+            <strong>How to get your free Google App Password:</strong>
+            <ol className="list-decimal list-inside mt-2 text-xs space-y-1 opacity-90">
+              <li>Open your Google Account Security settings.</li>
+              <li>Ensure <strong>2-Step Verification</strong> is ON.</li>
+              <li>Search for &quot;App Passwords&quot;.</li>
+              <li>Type &quot;EcoReceipt&quot; as the app name and hit Generate.</li>
+              <li>Paste the 16-letter password below!</li>
+            </ol>
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="senderEmail">Your Gmail Address</Label>
+              <Input
+                id="senderEmail"
+                type="email"
+                placeholder="your.shop@gmail.com"
+                value={shop.senderEmail}
+                onChange={(e) => updateField("senderEmail", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="emailAppPassword">Google App Password</Label>
+              <Input
+                id="emailAppPassword"
+                type="password"
+                placeholder="16-letter app password"
+                value={shop.emailAppPassword}
+                onChange={(e) => updateField("emailAppPassword", e.target.value)}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

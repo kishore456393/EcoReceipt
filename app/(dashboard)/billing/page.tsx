@@ -107,6 +107,7 @@ export default function BillingPage() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
   const [manualName, setManualName] = useState("");
   const [manualBarcode, setManualBarcode] = useState("");
   const [manualPrice, setManualPrice] = useState("");
@@ -597,6 +598,7 @@ export default function BillingPage() {
           })),
           customerName: customerName.trim() || null,
           customerPhone: customerPhone.trim() || null,
+          customerEmail: customerEmail.trim() || null,
           discount: discountAmount,
           taxPercent,
         }),
@@ -622,6 +624,7 @@ export default function BillingPage() {
     setCart([]);
     setCustomerName("");
     setCustomerPhone("");
+    setCustomerEmail("");
     setDiscount("0");
     setGeneratedBill(null);
     setQrModalOpen(false);
@@ -881,8 +884,15 @@ export default function BillingPage() {
               />
               <Input
                 placeholder="Phone number (optional)"
+                type="tel"
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
+              />
+              <Input
+                placeholder="Email address (optional)"
+                type="email"
+                value={customerEmail}
+                onChange={(e) => setCustomerEmail(e.target.value)}
               />
             </CardContent>
           </Card>

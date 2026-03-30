@@ -87,6 +87,8 @@ model Shop {
   razorpayKey String?
   razorpaySecret String?
   smsApiKey   String?
+  senderEmail String?
+  emailAppPassword String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -122,6 +124,7 @@ model Bill {
   billNumber    String     @unique
   customerName  String?
   customerPhone String?
+  customerEmail String?
   subtotal      Float
   taxAmount     Float      @default(0)
   taxPercent    Float      @default(0)

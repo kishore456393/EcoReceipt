@@ -38,10 +38,11 @@ export async function POST(
     }
 
     const body = await req.json();
-    const { items, customerName, customerPhone } = body as {
+    const { items, customerName, customerPhone, customerEmail } = body as {
       items: SelfCheckoutItem[];
       customerName?: string;
       customerPhone?: string;
+      customerEmail?: string;
     };
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -75,6 +76,7 @@ export async function POST(
         billNumber,
         customerName: customerName.trim(),
         customerPhone: customerPhone?.trim() || null,
+        customerEmail: customerEmail?.trim() || null,
         subtotal: Math.round(subtotal * 100) / 100,
         taxAmount: Math.round(taxAmount * 100) / 100,
         taxPercent,
@@ -91,7 +93,7 @@ export async function POST(
             total: Math.round(item.price * item.quantity * 100) / 100,
           })),
         },
-      },
+      } as any,
       include: {
         items: true,
         shop: {

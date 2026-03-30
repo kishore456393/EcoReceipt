@@ -50,6 +50,8 @@ export async function POST(req: Request) {
       razorpayKey,
       razorpaySecret,
       smsApiKey,
+      senderEmail,
+      emailAppPassword,
     } = body;
 
     if (!name) {
@@ -74,7 +76,9 @@ export async function POST(req: Request) {
         razorpayKey,
         razorpaySecret,
         smsApiKey,
-      },
+        senderEmail,
+        emailAppPassword,
+      } as any, // Cast to any because the Prisma types are locked dynamically by NextJS Dev server
       create: {
         ownerId: session.user.id,
         name,
@@ -89,7 +93,9 @@ export async function POST(req: Request) {
         razorpayKey,
         razorpaySecret,
         smsApiKey,
-      },
+        senderEmail,
+        emailAppPassword,
+      } as any,
     });
 
     return NextResponse.json(shop);

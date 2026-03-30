@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { formatBillSMS, sendSMSFast2SMS } from "@/lib/sms";
+import { sendEmailReceipt } from "@/lib/mail";
 import os from "os";
 
 function getNetworkUrl(): string {
@@ -165,7 +166,55 @@ export async function PUT(
       }
     }
 
-    return NextResponse.json({ ...bill, smsSent, smsError, smsSkipReason });
+    // Auto-send Email when bill is marked PAID and customer email exists
+    let emailSent = false;
+    let emailError: string | undefined;
+    let emailSkipReason: string | undefined;
+
+    if (status === "PAID") {
+      const customerEmail = (bill as any).customerEmail;
+      const senderEmail = (shop as any).senderEmail;
+      const emailAppPassword = (shop as any).emailAppPassword;
+
+      if (!customerEmail) {
+        emailSkipReason = "No customer email on bill";
+      } else if (!senderEmail || !emailAppPassword) {
+        emailSkipReason = "Shop Email credentials not configured in Shop Settings";
+      } else {
+        const baseUrl = getNetworkUrl();
+        const receiptUrl = `${baseUrl}/receipt/${bill.qrToken}`;
+
+        const result = await sendEmailReceipt({
+          shopName: shop.name,
+          senderEmail: senderEmail,
+          emailAppPassword: emailAppPassword,
+          customerEmail: customerEmail,
+          billNumber: bill.billNumber,
+          items: bill.items.map((i: any) => ({
+            name: i.name,
+            quantity: i.quantity,
+            price: i.price,
+            total: i.total,
+          })),
+          subtotal: bill.subtotal,
+          taxAmount: bill.taxAmount,
+          discount: bill.discount,
+          total: bill.total,
+          status: "PAID",
+          receiptUrl,
+          customerName: bill.customerName || undefined,
+        });
+
+        emailSent = result.success;
+        emailError = result.error;
+
+        if (!result.success) {
+          console.error("Email sending failed:", result.error);
+        }
+      }
+    }
+
+    return NextResponse.json({ ...bill, smsSent, smsError, smsSkipReason, emailSent, emailError, emailSkipReason });
   } catch (error) {
     console.error("Error updating bill:", error);
     return NextResponse.json(
