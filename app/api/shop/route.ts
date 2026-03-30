@@ -49,6 +49,7 @@ export async function POST(req: Request) {
       taxPercent,
       razorpayKey,
       razorpaySecret,
+      smsApiKey,
     } = body;
 
     if (!name) {
@@ -72,6 +73,7 @@ export async function POST(req: Request) {
         taxPercent: taxPercent ? parseFloat(taxPercent) : 0,
         razorpayKey,
         razorpaySecret,
+        smsApiKey,
       },
       create: {
         ownerId: session.user.id,
@@ -86,6 +88,7 @@ export async function POST(req: Request) {
         taxPercent: taxPercent ? parseFloat(taxPercent) : 0,
         razorpayKey,
         razorpaySecret,
+        smsApiKey,
       },
     });
 
