@@ -61,10 +61,11 @@ export const authOptions: NextAuthOptions = {
         });
 
         (user as any).role = "SHOP_OWNER";
-        return true;
-      } catch {
-        return false;
+      } catch (error) {
+        console.error("Failed to set default role during sign in:", error);
       }
+
+      return true;
     },
     async jwt({ token, user, trigger }) {
       // On initial sign in, attach user id and role
