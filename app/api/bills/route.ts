@@ -3,6 +3,29 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { generateBillNumber } from "@/lib/generate-bill-number";
+import { formatBillSMS, sendSMSFast2SMS } from "@/lib/sms";
+import os from "os";
+
+function getNetworkUrl(): string {
+  if (process.env.NEXTAUTH_URL && !process.env.NEXTAUTH_URL.includes("localhost")) {
+    return process.env.NEXTAUTH_URL.replace(/\/$/, "");
+  }
+  const interfaces = os.networkInterfaces();
+  let lanIp: string | null = null;
+  for (const name of Object.keys(interfaces)) {
+    const iface = interfaces[name];
+    if (!iface) continue;
+    for (const info of iface) {
+      if (info.family === "IPv4" && !info.internal) {
+        lanIp = info.address;
+        break;
+      }
+    }
+    if (lanIp) break;
+  }
+  const port = process.env.PORT || "3000";
+  return lanIp ? `http://${lanIp}:${port}` : `http://localhost:${port}`;
+}
 
 export async function GET(req: Request) {
   try {
@@ -248,10 +271,50 @@ export async function PATCH(req: Request) {
         data: {
           status: "PAID",
           verifiedAt: new Date(),
-        },
+        } as any, // Cast to any because verifiedAt might not be present in cached types
         include: { items: true },
       });
-      return NextResponse.json(updated);
+
+      let smsSent = false;
+      let smsError: string | undefined;
+      let smsSkipReason: string | undefined;
+
+      if (!updated.customerPhone) {
+        smsSkipReason = "No customer phone number on bill";
+      } else if (!shop.smsApiKey) {
+        smsSkipReason = "Fast2SMS API key not configured in Shop Settings";
+      } else {
+        const baseUrl = getNetworkUrl();
+        const receiptUrl = `${baseUrl}/receipt/${updated.qrToken}`;
+
+        const message = formatBillSMS({
+          shopName: shop.name,
+          billNumber: updated.billNumber,
+          items: (updated as any).items.map((i: any) => ({
+            name: i.name,
+            quantity: i.quantity,
+            price: i.price,
+            total: i.total,
+          })),
+          subtotal: updated.subtotal,
+          taxAmount: updated.taxAmount,
+          discount: updated.discount,
+          total: updated.total,
+          status: "PAID",
+          receiptUrl,
+          customerName: updated.customerName || undefined,
+        });
+
+        const result = await sendSMSFast2SMS(shop.smsApiKey, updated.customerPhone, message);
+        smsSent = result.success;
+        smsError = result.error;
+
+        if (!result.success) {
+          console.error("SMS sending failed for self-checkout:", result.error);
+        }
+      }
+
+      return NextResponse.json({ ...updated, smsSent, smsError, smsSkipReason });
     }
 
     if (action === "cancel") {
