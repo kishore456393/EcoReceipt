@@ -32,6 +32,7 @@ import {
   Save,
   RefreshCw,
   Smartphone,
+  ScanLine,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -137,6 +138,8 @@ export default function BillingPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scanLockRef = useRef(false);
+  const [shopId, setShopId] = useState<string | null>(null);
+  const [selfCheckoutModalOpen, setSelfCheckoutModalOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/network-url")
@@ -171,6 +174,7 @@ export default function BillingPage() {
         const res = await fetch("/api/shop");
         if (res.ok) {
           const data = await res.json();
+          if (data?.id) setShopId(data.id);
           if (data?.taxPercent) setTaxPercent(data.taxPercent);
         }
       } catch {}
@@ -684,9 +688,22 @@ export default function BillingPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Create New Bill</h2>
-        <p className="text-muted-foreground">Search items, build cart, generate QR receipt.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Create New Bill</h2>
+          <p className="text-muted-foreground">Search items, build cart, generate QR receipt.</p>
+        </div>
+        <Button
+          variant="outline"
+          className="border-primary text-primary hover:bg-primary/10"
+          onClick={() => {
+            if (!shopId) toast.error("Shop details not loaded yet");
+            else setSelfCheckoutModalOpen(true);
+          }}
+        >
+          <ScanLine className="mr-2 h-4 w-4" />
+          Self-Checkout QR
+        </Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-5">
@@ -1122,6 +1139,68 @@ export default function BillingPage() {
             >
               Stop Mobile Scanner
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Self-Checkout QR Modal */}
+      <Dialog open={selfCheckoutModalOpen} onOpenChange={setSelfCheckoutModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl">Self-Checkout QR</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center p-6 space-y-6">
+            <div className="rounded-xl border-4 border-primary/20 p-6 bg-white shadow-sm">
+              <QRCodeSVG
+                value={`${baseUrl}/self-checkout/${shopId}`}
+                size={220}
+                level="H"
+                fgColor="#0d9669"
+                imageSettings={{
+                  src: "/logo.svg",
+                  x: undefined,
+                  y: undefined,
+                  height: 48,
+                  width: 48,
+                  excavate: true,
+                }}
+              />
+            </div>
+            <div className="text-center space-y-2 max-w-[280px]">
+              <p className="text-sm font-medium">Have your customers scan this to order and pay from their phone.</p>
+              <p className="text-xs text-muted-foreground">You can display this at your counter or print it out.</p>
+            </div>
+            <div className="flex gap-3 w-full">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  const printWindow = window.open("", "_blank");
+                  if (printWindow) {
+                    printWindow.document.write(`
+                      <html><head><title>Self-Checkout QR</title>
+                      <style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;text-align:center;}
+                      h1{margin-bottom:8px;}p{color:#666;margin-bottom:24px;font-size:18px;}</style></head><body>
+                      <h1>Self-Checkout</h1>
+                      <p>Scan to build your cart & pay from your phone!</p>
+                      <img width="300" src="${document.querySelector(".border-4.border-primary\\/20 svg")?.outerHTML ? `data:image/svg+xml,${encodeURIComponent(document.querySelector(".border-4.border-primary\\/20 svg")?.outerHTML || "")}` : ""}" />
+                      <script>setTimeout(()=>window.print(),500)</script></body></html>
+                    `);
+                  }
+                }}
+              >
+                <Printer size={16} className="mr-2" /> Print
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={() => {
+                  navigator.clipboard.writeText(`${baseUrl}/self-checkout/${shopId}`);
+                  toast.success("Link copied!");
+                }}
+              >
+                <Share2 size={16} className="mr-2" /> Copy Link
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

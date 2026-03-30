@@ -130,12 +130,35 @@ export default function BillsPage() {
     }
   };
 
+  const verifySelfCheckoutBill = async (billId: string, action: "verify" | "cancel") => {
+    setUpdatingStatus(billId);
+    try {
+      const res = await fetch(`/api/bills`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ billId, action }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(action === "verify" ? "Self-checkout verified and marked paid!" : "Self-checkout cancelled.");
+      fetchBills();
+      if (selectedBill?.id === billId) {
+        setSelectedBill((prev) => prev ? { ...prev, status: action === "verify" ? "PAID" : "CANCELLED" } : null);
+      }
+    } catch {
+      toast.error(`Failed to ${action} self-checkout bill`);
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "PAID":
         return <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">Paid</Badge>;
       case "CANCELLED":
         return <Badge variant="destructive">Cancelled</Badge>;
+      case "PENDING_VERIFICATION":
+        return <Badge className="bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900 dark:text-amber-200">Action Required</Badge>;
       default:
         return <Badge variant="secondary">Pending</Badge>;
     }
@@ -199,6 +222,7 @@ export default function BillsPage() {
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="PENDING_VERIFICATION">Self-Checkout</SelectItem>
                 <SelectItem value="PAID">Paid</SelectItem>
                 <SelectItem value="CANCELLED">Cancelled</SelectItem>
               </SelectContent>
@@ -275,6 +299,30 @@ export default function BillsPage() {
                               disabled={updatingStatus === bill.id}
                               onClick={() => updateBillStatus(bill.id, "CANCELLED")}
                               title="Cancel bill"
+                            >
+                              <XCircle size={16} />
+                            </Button>
+                          </>
+                        )}
+                        {bill.status === "PENDING_VERIFICATION" && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-300"
+                              disabled={updatingStatus === bill.id}
+                              onClick={() => verifySelfCheckoutBill(bill.id, "verify")}
+                              title="Verify Self-Checkout"
+                            >
+                              Verify
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive"
+                              disabled={updatingStatus === bill.id}
+                              onClick={() => verifySelfCheckoutBill(bill.id, "cancel")}
+                              title="Reject Self-Checkout"
                             >
                               <XCircle size={16} />
                             </Button>

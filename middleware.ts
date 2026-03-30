@@ -10,10 +10,11 @@ export async function middleware(req: NextRequest) {
   const isPublicRoute = publicRoutes.includes(pathname);
   const isReceiptRoute = pathname.startsWith("/receipt/");
   const isScannerRoute = pathname.startsWith("/scanner/");
+  const isSelfCheckoutRoute = pathname.startsWith("/self-checkout/");
   const isApiRoute = pathname.startsWith("/api/");
 
-  // Allow public routes, receipt pages, scanner pages, and API routes
-  if (isPublicRoute || isReceiptRoute || isScannerRoute || isApiRoute) {
+  // Allow public routes, receipt pages, scanner pages, self-checkout pages, and API routes
+  if (isPublicRoute || isReceiptRoute || isScannerRoute || isSelfCheckoutRoute || isApiRoute) {
     return NextResponse.next();
   }
 

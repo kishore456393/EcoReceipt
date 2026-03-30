@@ -1,27 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
-// In-memory store for scanner sessions (in production, use Redis)
-const scannerSessions = new Map<
-  string,
-  {
-    barcodes: Array<{ barcode: string; timestamp: number }>;
-    lastPoll: number;
-    userId: string;
-  }
->();
-
-// Clean up old sessions every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [sessionId, session] of scannerSessions.entries()) {
-    // Remove sessions inactive for more than 30 minutes
-    if (now - session.lastPoll > 30 * 60 * 1000) {
-      scannerSessions.delete(sessionId);
-    }
-  }
-}, 5 * 60 * 1000);
+export const dynamic = "force-dynamic";
 
 // POST: Add a barcode to a session (PUBLIC - no auth required for phone scanner)
 export async function POST(req: NextRequest) {
@@ -35,7 +17,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const scanSession = scannerSessions.get(sessionId);
+    const scanSession = await prisma.scannerSession.findUnique({
+      where: { id: sessionId },
+    });
+
     if (!scanSession) {
       return NextResponse.json(
         { error: "Session not found or expired" },
@@ -44,9 +29,23 @@ export async function POST(req: NextRequest) {
     }
 
     // Add barcode to session
-    scanSession.barcodes.push({
+    let barcodes: Array<{ barcode: string; timestamp: number }> = [];
+    try {
+      if (scanSession.barcodes) {
+        barcodes = JSON.parse(scanSession.barcodes);
+      }
+    } catch {
+      // ignore
+    }
+
+    barcodes.push({
       barcode: barcode.trim(),
       timestamp: Date.now(),
+    });
+
+    await prisma.scannerSession.update({
+      where: { id: sessionId },
+      data: { barcodes: JSON.stringify(barcodes) },
     });
 
     return NextResponse.json({ success: true });
@@ -64,7 +63,15 @@ export async function HEAD(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get("sessionId");
 
-  if (!sessionId || !scannerSessions.has(sessionId)) {
+  if (!sessionId) {
+    return new NextResponse(null, { status: 404 });
+  }
+
+  const session = await prisma.scannerSession.findUnique({
+    where: { id: sessionId },
+  });
+
+  if (!session) {
     return new NextResponse(null, { status: 404 });
   }
 
@@ -84,18 +91,34 @@ export async function GET(req: NextRequest) {
 
   // Create new session
   if (action === "create") {
-    const newSessionId = `scan-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    scannerSessions.set(newSessionId, {
-      barcodes: [],
-      lastPoll: Date.now(),
-      userId: session.user.id,
+    // Clean up old sessions first
+    await prisma.scannerSession.deleteMany({
+      where: {
+        updatedAt: {
+          lt: new Date(Date.now() - 30 * 60 * 1000), // older than 30 mins
+        },
+      },
     });
+
+    const newSessionId = `scan-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    
+    await prisma.scannerSession.create({
+      data: {
+        id: newSessionId,
+        userId: session.user.id,
+        barcodes: "[]",
+      },
+    });
+
     return NextResponse.json({ sessionId: newSessionId });
   }
 
   // Poll for barcodes
   if (sessionId) {
-    const scanSession = scannerSessions.get(sessionId);
+    const scanSession = await prisma.scannerSession.findUnique({
+      where: { id: sessionId },
+    });
+
     if (!scanSession) {
       return NextResponse.json(
         { error: "Session not found" },
@@ -108,13 +131,30 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    scanSession.lastPoll = Date.now();
+    let barcodes: Array<{ barcode: string; timestamp: number }> = [];
+    try {
+      if (scanSession.barcodes) {
+        barcodes = JSON.parse(scanSession.barcodes);
+      }
+    } catch {
+      // ignore
+    }
 
     // Get and clear barcodes
-    const barcodes = [...scanSession.barcodes];
-    scanSession.barcodes = [];
+    if (barcodes.length > 0) {
+      await prisma.scannerSession.update({
+        where: { id: sessionId },
+        data: { barcodes: "[]" },
+      });
+    } else {
+      // Just update updatedAt if no new barcodes, to keep session active
+      await prisma.scannerSession.update({
+        where: { id: sessionId },
+        data: { barcodes: "[]" },
+      });
+    }
 
-    return NextResponse.json({ barcodes });
+    return NextResponse.json({ barcodes: barcodes.map(b => ({ barcode: b.barcode, timestamp: b.timestamp })) });
   }
 
   return NextResponse.json({ error: "Invalid request" }, { status: 400 });
@@ -131,10 +171,12 @@ export async function DELETE(req: NextRequest) {
   const sessionId = searchParams.get("sessionId");
 
   if (sessionId) {
-    const scanSession = scannerSessions.get(sessionId);
-    if (scanSession?.userId === session.user.id) {
-      scannerSessions.delete(sessionId);
-    }
+    await prisma.scannerSession.deleteMany({
+      where: {
+        id: sessionId,
+        userId: session.user.id,
+      },
+    });
   }
 
   return NextResponse.json({ success: true });

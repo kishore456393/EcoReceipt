@@ -187,7 +187,7 @@ export async function POST(req: Request) {
       await Promise.all(stockUpdates);
     }
 
-    return NextResponse.json(bill, { status: 201 });
+     return NextResponse.json(bill, { status: 201 });
   } catch (error: any) {
     console.error("Error creating bill:", error);
     console.error("Error details:", {
@@ -200,6 +200,76 @@ export async function POST(req: Request) {
       : "Failed to create bill";
     return NextResponse.json(
       { error: errorMessage },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH: Verify a self-checkout bill (owner only)
+export async function PATCH(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const shop = await prisma.shop.findUnique({
+      where: { ownerId: session.user.id },
+    });
+
+    if (!shop) {
+      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+    }
+
+    const body = await req.json();
+    const { billId, action } = body as { billId: string; action: "verify" | "cancel" };
+
+    if (!billId || !action) {
+      return NextResponse.json(
+        { error: "billId and action are required" },
+        { status: 400 }
+      );
+    }
+
+    const bill = await prisma.bill.findFirst({
+      where: {
+        id: billId,
+        shopId: shop.id,
+      },
+    });
+
+    if (!bill) {
+      return NextResponse.json({ error: "Bill not found" }, { status: 404 });
+    }
+
+    if (action === "verify") {
+      const updated = await prisma.bill.update({
+        where: { id: billId },
+        data: {
+          status: "PAID",
+          verifiedAt: new Date(),
+        },
+        include: { items: true },
+      });
+      return NextResponse.json(updated);
+    }
+
+    if (action === "cancel") {
+      const updated = await prisma.bill.update({
+        where: { id: billId },
+        data: {
+          status: "CANCELLED",
+        },
+        include: { items: true },
+      });
+      return NextResponse.json(updated);
+    }
+
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  } catch (error) {
+    console.error("Error verifying bill:", error);
+    return NextResponse.json(
+      { error: "Failed to verify bill" },
       { status: 500 }
     );
   }
