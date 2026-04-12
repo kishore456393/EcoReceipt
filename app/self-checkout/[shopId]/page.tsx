@@ -223,38 +223,21 @@ export default function SelfCheckoutPage() {
       const barcode = rawBarcode.trim();
       if (!barcode) return;
 
-      // Duplicate check
-      const now = Date.now();
-      if (
-        barcode === lastScannedRef.current &&
-        now - lastScanTimeRef.current < 2000
-      ) {
-        // Same barcode — increase quantity
-        const cartItem = cart.find((c) => c.barcode === barcode);
-        if (cartItem) {
-          setCart((prev) =>
-            prev.map((c) =>
-              c.barcode === barcode
-                ? {
-                    ...c,
-                    quantity: c.quantity + 1,
-                    total: (c.quantity + 1) * c.price,
-                  }
-                : c
-            )
-          );
-          playBeep(true);
-          toast.info("Same barcode — quantity increased");
-        }
-        setBarcodeInput("");
-        return;
-      }
-
       lastScannedRef.current = barcode;
-      lastScanTimeRef.current = now;
+      lastScanTimeRef.current = Date.now();
       setLookupLoading(true);
 
       try {
+        // Check if product already in cart
+        const existingInCart = cart.find((c) => c.barcode === barcode);
+        if (existingInCart) {
+          playBeep(false);
+          toast.info(`${existingInCart.name} is already in the cart. Adjust quantity manually.`);
+          setBarcodeInput("");
+          setLookupLoading(false);
+          return;
+        }
+
         // Check client-side first
         const localItem = items.find((i) => i.barcode === barcode);
         if (localItem) {
@@ -752,6 +735,10 @@ export default function SelfCheckoutPage() {
                         <button
                           key={item.id}
                           onClick={() => {
+                            if (inCart) {
+                              toast.info(`${item.name} is already in cart. Adjust quantity manually.`);
+                              return;
+                            }
                             addToCart(item);
                             playBeep(true);
                             toast.success(`${item.name} added!`);

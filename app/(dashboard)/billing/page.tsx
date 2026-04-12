@@ -223,21 +223,11 @@ export default function BillingPage() {
       const barcode = rawBarcode.trim();
       if (!barcode) return;
 
-      // Prevent duplicate scans of same barcode in quick succession
-      if (barcode === lastScannedBarcode) {
-        if (soundEnabled) playBeep(true);
-        toast.info("Same barcode - quantity increased");
-        // Find item in cart and increase quantity
-        const cartItem = cart.find((c) => c.barcode === barcode);
-        if (cartItem) {
-          setCart((prev) =>
-            prev.map((c) =>
-              c.barcode === barcode
-                ? { ...c, quantity: c.quantity + 1, total: (c.quantity + 1) * c.price }
-                : c
-            )
-          );
-        }
+      // Check if product already in cart - prevent duplicates
+      const existingInCart = cart.find((c) => c.barcode === barcode);
+      if (existingInCart) {
+        if (soundEnabled) playBeep(false);
+        toast.info(`${existingInCart.name} is already in cart. Adjust quantity manually.`);
         setBarcodeInput("");
         return;
       }
@@ -294,7 +284,7 @@ export default function BillingPage() {
         setBarcodeInput(""); // clear input after lookup
       }
     },
-    [items, soundEnabled, lastScannedBarcode, cart]
+    [items, soundEnabled, cart, addToCart]
   );
 
   useEffect(() => {
@@ -787,7 +777,13 @@ export default function BillingPage() {
                     return (
                       <button
                         key={item.id}
-                        onClick={() => addToCart(item)}
+                        onClick={() => {
+                          if (inCart) {
+                            toast.info(`${item.name} is already in cart. Adjust quantity manually.`);
+                            return;
+                          }
+                          addToCart(item);
+                        }}
                         className="flex items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent"
                       >
                         <div className="min-w-0">
