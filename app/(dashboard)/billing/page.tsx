@@ -337,8 +337,8 @@ export default function BillingPage() {
             if (!value) return;
 
             const now = Date.now();
-            // Prevent duplicate detection of same barcode within 2 seconds
-            if (value === lastDetectedBarcode && now - lastDetectedTime < 2000) {
+            // Prevent duplicate detection of same barcode within 3 seconds
+            if (value === lastDetectedBarcode && now - lastDetectedTime < 3000) {
               return;
             }
 

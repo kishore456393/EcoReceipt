@@ -159,13 +159,11 @@ export default function SelfCheckoutPage() {
 
   // Cart management
   const addToCart = useCallback((item: ShopItem) => {
-    let isDuplicate = false;
+    let didAdd = false;
     setCart((prev) => {
       const existing = prev.find((c) => c.itemId === item.id);
-      if (existing) {
-        isDuplicate = true;
-        return prev;
-      }
+      if (existing) return prev;
+      didAdd = true;
       return [
         ...prev,
         {
@@ -178,11 +176,7 @@ export default function SelfCheckoutPage() {
         },
       ];
     });
-
-    // Show toast after state update
-    if (isDuplicate) {
-      toast.info(`${item.name} is already in cart. Adjust quantity manually.`);
-    }
+    return didAdd;
   }, []);
 
   const updateQuantity = (itemId: string, delta: number) => {
@@ -226,17 +220,30 @@ export default function SelfCheckoutPage() {
       const barcode = rawBarcode.trim();
       if (!barcode) return;
 
+      const now = Date.now();
+      if (
+        barcode === lastScannedRef.current &&
+        now - lastScanTimeRef.current < 3000
+      ) {
+        return;
+      }
       lastScannedRef.current = barcode;
-      lastScanTimeRef.current = Date.now();
+      lastScanTimeRef.current = now;
       setLookupLoading(true);
 
       try {
         // Check client-side first
         const localItem = items.find((i) => i.barcode === barcode);
         if (localItem) {
-          addToCart(localItem);
+          const didAdd = addToCart(localItem);
           playBeep(true);
-          toast.success(`${localItem.name} added!`);
+          if (didAdd) {
+            toast.success(`${localItem.name} added!`);
+          } else {
+            toast.info(
+              `${localItem.name} is already in cart. Adjust quantity manually.`
+            );
+          }
           setBarcodeInput("");
           setLookupLoading(false);
           return;
@@ -249,9 +256,15 @@ export default function SelfCheckoutPage() {
         if (res.ok) {
           const data = await res.json();
           if (data.found && data.item) {
-            addToCart(data.item);
+            const didAdd = addToCart(data.item);
             playBeep(true);
-            toast.success(`${data.item.name} added!`);
+            if (didAdd) {
+              toast.success(`${data.item.name} added!`);
+            } else {
+              toast.info(
+                `${data.item.name} is already in cart. Adjust quantity manually.`
+              );
+            }
           } else if (data.product) {
             playBeep(true);
             toast.info(
@@ -723,15 +736,18 @@ export default function SelfCheckoutPage() {
                     </p>
                   ) : (
                     filteredItems.map((item) => {
-                      const inCart = cart.find((c) => c.itemId === item.id);
                       return (
                         <button
                           key={item.id}
                           onClick={() => {
-                            addToCart(item);
-                            if (!inCart) {
+                            const didAdd = addToCart(item);
+                            if (didAdd) {
                               playBeep(true);
                               toast.success(`${item.name} added!`);
+                            } else {
+                              toast.info(
+                                `${item.name} is already in cart. Adjust quantity manually.`
+                              );
                             }
                           }}
                           className="flex items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent active:scale-[0.98]"
