@@ -162,11 +162,9 @@ export default function SelfCheckoutPage() {
     setCart((prev) => {
       const existing = prev.find((c) => c.itemId === item.id);
       if (existing) {
-        return prev.map((c) =>
-          c.itemId === item.id
-            ? { ...c, quantity: c.quantity + 1, total: (c.quantity + 1) * c.price }
-            : c
-        );
+        // Product already in cart - don't add again
+        toast.info(`${item.name} is already in cart. Adjust quantity manually.`);
+        return prev;
       }
       return [
         ...prev,
@@ -228,16 +226,6 @@ export default function SelfCheckoutPage() {
       setLookupLoading(true);
 
       try {
-        // Check if product already in cart
-        const existingInCart = cart.find((c) => c.barcode === barcode);
-        if (existingInCart) {
-          playBeep(false);
-          toast.info(`${existingInCart.name} is already in the cart. Adjust quantity manually.`);
-          setBarcodeInput("");
-          setLookupLoading(false);
-          return;
-        }
-
         // Check client-side first
         const localItem = items.find((i) => i.barcode === barcode);
         if (localItem) {
@@ -280,7 +268,7 @@ export default function SelfCheckoutPage() {
         setBarcodeInput("");
       }
     },
-    [items, cart, shopId, addToCart]
+    [items, shopId, addToCart]
   );
 
   const startScanner = useCallback(async () => {
@@ -735,13 +723,11 @@ export default function SelfCheckoutPage() {
                         <button
                           key={item.id}
                           onClick={() => {
-                            if (inCart) {
-                              toast.info(`${item.name} is already in cart. Adjust quantity manually.`);
-                              return;
-                            }
                             addToCart(item);
-                            playBeep(true);
-                            toast.success(`${item.name} added!`);
+                            if (!inCart) {
+                              playBeep(true);
+                              toast.success(`${item.name} added!`);
+                            }
                           }}
                           className="flex items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent active:scale-[0.98]"
                         >
