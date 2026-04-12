@@ -159,11 +159,11 @@ export default function SelfCheckoutPage() {
 
   // Cart management
   const addToCart = useCallback((item: ShopItem) => {
+    let isDuplicate = false;
     setCart((prev) => {
       const existing = prev.find((c) => c.itemId === item.id);
       if (existing) {
-        // Product already in cart - don't add again
-        toast.info(`${item.name} is already in cart. Adjust quantity manually.`);
+        isDuplicate = true;
         return prev;
       }
       return [
@@ -178,6 +178,11 @@ export default function SelfCheckoutPage() {
         },
       ];
     });
+
+    // Show toast after state update
+    if (isDuplicate) {
+      toast.info(`${item.name} is already in cart. Adjust quantity manually.`);
+    }
   }, []);
 
   const updateQuantity = (itemId: string, delta: number) => {

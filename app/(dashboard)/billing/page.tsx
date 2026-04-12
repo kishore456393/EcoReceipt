@@ -184,14 +184,12 @@ export default function BillingPage() {
   }, []);
 
   const addToCart = (item: Item) => {
+    let isDuplicate = false;
     setCart((prev) => {
       const existing = prev.find((c) => c.itemId === item.id);
       if (existing) {
-        return prev.map((c) =>
-          c.itemId === item.id
-            ? { ...c, quantity: c.quantity + 1, total: (c.quantity + 1) * c.price }
-            : c
-        );
+        isDuplicate = true;
+        return prev;
       }
       return [
         ...prev,
@@ -205,6 +203,11 @@ export default function BillingPage() {
         },
       ];
     });
+
+    // Show toast after state update
+    if (isDuplicate) {
+      toast.info(`${item.name} is already in cart. Adjust quantity manually.`);
+    }
   };
 
   const stopScanner = useCallback(() => {
