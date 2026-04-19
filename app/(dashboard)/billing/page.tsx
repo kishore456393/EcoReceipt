@@ -183,7 +183,7 @@ export default function BillingPage() {
     fetchShop();
   }, []);
 
-  const addToCart = (item: Item) => {
+  const addToCart = (item: Item): boolean => {
     let isDuplicate = false;
     setCart((prev) => {
       const existing = prev.find((c) => c.itemId === item.id);
@@ -204,10 +204,7 @@ export default function BillingPage() {
       ];
     });
 
-    // Show toast after state update
-    if (isDuplicate) {
-      toast.info(`${item.name} is already in cart. Adjust quantity manually.`);
-    }
+    return !isDuplicate;
   };
 
   const stopScanner = useCallback(() => {
@@ -241,9 +238,14 @@ export default function BillingPage() {
       try {
         const existing = items.find((item) => item.barcode === barcode);
         if (existing) {
-          addToCart(existing);
-          if (soundEnabled) playBeep(true);
-          toast.success(`${existing.name} added to cart`);
+          const added = addToCart(existing);
+          if (added) {
+            if (soundEnabled) playBeep(true);
+            toast.success(`${existing.name} added to cart`);
+          } else {
+            if (soundEnabled) playBeep(false);
+            toast.info(`${existing.name} is already in cart. Adjust quantity manually.`);
+          }
           return;
         }
 
@@ -258,9 +260,14 @@ export default function BillingPage() {
         const data: BarcodeLookupResponse = await res.json();
 
         if (data.found && data.item) {
-          addToCart(data.item);
-          if (soundEnabled) playBeep(true);
-          toast.success(`${data.item.name} added to cart`);
+          const added = addToCart(data.item);
+          if (added) {
+            if (soundEnabled) playBeep(true);
+            toast.success(`${data.item.name} added to cart`);
+          } else {
+            if (soundEnabled) playBeep(false);
+            toast.info(`${data.item.name} is already in cart. Adjust quantity manually.`);
+          }
           return;
         }
 
@@ -1213,6 +1220,7 @@ export default function BillingPage() {
           </div>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }
