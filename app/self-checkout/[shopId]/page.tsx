@@ -736,6 +736,8 @@ export default function SelfCheckoutPage() {
                     </p>
                   ) : (
                     filteredItems.map((item) => {
+                      const inCart = cart.find((cartItem) => cartItem.itemId === item.id);
+
                       return (
                         <button
                           key={item.id}
